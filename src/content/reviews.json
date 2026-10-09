@@ -1,0 +1,23 @@
+[
+  {
+    "id": "r1",
+    "author": "Agustín",
+    "date": "2026-09-30",
+    "stars": 4,
+    "text": "Buena atención y respondieron rápido todas mis dudas. El envío tardó un par de días más de lo que esperaba, pero llegó todo bien embalado."
+  },
+  {
+    "id": "r2",
+    "author": "Nadin",
+    "date": "2026-09-30",
+    "stars": 5,
+    "text": "Llegó impecable, mejor de lo que se veía en las fotos. Me respondieron todas las dudas por WhatsApp antes y después de la compra."
+  },
+  {
+    "id": "r3",
+    "author": "Flor",
+    "date": "2026-10-04",
+    "stars": 5,
+    "text": "Pedí una DS Lite y me mandaron una foto del cartucho funcionando antes de despacharla. Eso no lo hace nadie."
+  }
+]
