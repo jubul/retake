@@ -64,7 +64,7 @@ export function ProductsTable({ products }: { products: ProductWithImages[] }) {
                 </td>
                 <td className="p-3">
                   <p className="font-bold">{p.name}</p>
-                  <p className="pixel text-ink/60">{p.slug}</p>
+                  <p className="pixel text-ink/75">{p.slug}</p>
                 </td>
                 <td className="p-3">{categoryLabel(p.category)}</td>
                 <td className="p-3">{formatPrice(p.price)}</td>

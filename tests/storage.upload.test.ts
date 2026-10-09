@@ -61,4 +61,30 @@ describe('saveProductImage', () => {
     await expect(saveProductImage(pid, bad, '')).rejects.toThrow();
     expect(fs.existsSync(path.join(UPLOADS, 'products', pid))).toBe(false);
   });
+
+  it('si falla el put del thumb borra el archivo principal y relanza', async () => {
+    const real = getStorage();
+    const deleted: string[] = [];
+    const puts: string[] = [];
+    globalThis.__retakeStorage = {
+      put: async (key: string, data: Buffer, ct: string) => {
+        puts.push(key);
+        if (puts.length === 2) throw new Error('disco lleno');
+        await real.put(key, data, ct);
+      },
+      get: (key: string) => real.get(key),
+      delete: async (key: string) => {
+        deleted.push(key);
+        await real.delete(key);
+      },
+      publicUrl: (key: string) => real.publicUrl(key),
+    };
+    try {
+      await expect(saveProductImage(PID, await pngFile(100, 100), '')).rejects.toThrow('disco lleno');
+    } finally {
+      globalThis.__retakeStorage = real;
+    }
+    expect(deleted).toEqual([puts[0]]);
+    expect(await real.get(puts[0]!)).toBeNull();
+  });
 });

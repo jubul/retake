@@ -53,7 +53,7 @@ export function ImageManager({ productId, images }: { productId: string; images:
         <label htmlFor="images" className="pixel">
           Subir fotos
         </label>
-        <p className="pixel text-ink/60">Hasta 8 fotos, 8 MB c/u. La primera es la principal.</p>
+        <p className="pixel text-ink/75">Hasta 8 fotos, 8 MB c/u. La primera es la principal.</p>
         <input
           id="images"
           name="images"

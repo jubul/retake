@@ -31,7 +31,10 @@ export const productInputSchema = z.object({
   // vacío = se genera desde name
   slug: z.preprocess(emptyToNull, slugSchema.nullable()).transform((v) => v ?? undefined),
   category: z.enum(CATEGORY_VALUES, { error: 'Elegí una categoría' }),
-  price: z.coerce.number({ error: 'Poné un precio' }).int({ error: 'Sin decimales' }).min(0).max(99_999_999),
+  price: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.coerce.number({ error: 'Poné un precio' }).int({ error: 'Sin decimales' }).min(0).max(99_999_999),
+  ),
   status: z.enum(STATUS_VALUES, { error: 'Elegí un estado' }).default('available'),
   note: z.string().trim().max(120, { error: 'Máximo 120 caracteres' }).default(''),
   description: optionalText(2000),
@@ -57,7 +60,10 @@ export const imageFileSchema = z
 export const imageFilesSchema = z
   .array(imageFileSchema)
   .min(1, { error: 'Elegí al menos una foto' })
-  .max(IMAGES_MAX_PER_PRODUCT, { error: `Máximo ${IMAGES_MAX_PER_PRODUCT} fotos por producto` });
+  .max(IMAGES_MAX_PER_PRODUCT, { error: `Máximo ${IMAGES_MAX_PER_PRODUCT} fotos por producto` })
+  .refine((files) => files.reduce((sum, f) => sum + f.size, 0) <= IMAGES_MAX_PER_PRODUCT * IMAGE_MAX_BYTES, {
+    error: 'Máximo 64 MB en total por tanda',
+  });
 
 export const loginSchema = z.object({
   password: z.string().min(1, { error: 'Escribí la contraseña' }),

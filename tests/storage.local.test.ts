@@ -52,6 +52,18 @@ describe('LocalStorage', () => {
     expect(await storage.get('/etc/passwd')).toBeNull();
   });
 
+  it('delete quita el directorio vacío pero no el root ni uno con archivos', async () => {
+    await storage.put('products/x/a.webp', Buffer.from('a'), 'image/webp');
+    await storage.put('products/x/b.webp', Buffer.from('b'), 'image/webp');
+    await storage.delete('products/x/a.webp');
+    expect(fs.existsSync(path.join(root, 'products/x'))).toBe(true);
+    await storage.delete('products/x/b.webp');
+    expect(fs.existsSync(path.join(root, 'products/x'))).toBe(false);
+    await storage.put('top.webp', Buffer.from('t'), 'image/webp');
+    await storage.delete('top.webp');
+    expect(fs.existsSync(root)).toBe(true);
+  });
+
   it('delete con traversal no borra fuera del root', async () => {
     await storage.delete('../x.webp');
     expect(fs.existsSync(path.join(tmp, 'x.webp'))).toBe(true);

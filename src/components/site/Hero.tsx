@@ -4,7 +4,7 @@ import { publicEnv } from '@/lib/public-env';
 import { GENERIC_WHATSAPP_MESSAGE, whatsappUrl } from '@/lib/utils/whatsapp';
 import { HeroArt } from './HeroArt';
 
-export function Hero({ latest }: { latest: ProductWithImages | null }) {
+export function Hero({ product }: { product: ProductWithImages | null }) {
   return (
     <section className="hero dots">
       <Wrap className="hero-grid">
@@ -33,7 +33,7 @@ export function Hero({ latest }: { latest: ProductWithImages | null }) {
             </Button>
           </div>
         </div>
-        <HeroArt latest={latest} />
+        <HeroArt product={product} />
       </Wrap>
       <Marquee
         diagonal

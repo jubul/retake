@@ -1,12 +1,10 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { SESSION_COOKIE, verifySessionToken, type Session } from './session';
+import { SESSION_COOKIE, sessionFromCookie, type Session } from './session';
 
 export async function getSession(): Promise<Session | null> {
-  const secret = process.env.SESSION_SECRET ?? '';
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
-  if (!token || !secret) return null;
-  return verifySessionToken(token, secret);
+  return sessionFromCookie(token, process.env.SESSION_SECRET);
 }
 
 /** redirect('/admin/login') si no hay sesión válida. */

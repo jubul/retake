@@ -20,6 +20,7 @@ export function ProductGallery({ images, name, category, seed }: Props) {
           <Photo
             variant={variant}
             ratio="4/3"
+            loading="eager"
             image={{
               src: `/uploads/${current.path}`,
               alt: name,

@@ -30,6 +30,15 @@ export async function verifySessionToken(token: string, secret: string): Promise
   }
 }
 
+/** Verifica la cookie con el secret; null si falta alguno de los dos o el token es inválido. */
+export async function sessionFromCookie(
+  token: string | undefined,
+  secret: string | undefined,
+): Promise<Session | null> {
+  if (!token || !secret) return null;
+  return verifySessionToken(token, secret);
+}
+
 export function sessionCookieOptions(): {
   httpOnly: true;
   sameSite: 'lax';

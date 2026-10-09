@@ -2,37 +2,28 @@ import type { Metadata } from 'next';
 import { CatalogFilters } from '@/components/site/CatalogFilters';
 import { ProductGrid } from '@/components/site/ProductGrid';
 import { Hi, SectionHead, Wrap } from '@/components/ui';
+import { parseCatalogFilters } from '@/lib/products/cached';
+import { CATEGORIES } from '@/lib/products/constants';
 import { listProducts } from '@/lib/products/queries';
-import { catalogFiltersSchema } from '@/lib/products/schemas';
 
 export const dynamic = 'force-dynamic';
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
-/** searchParams puede traer arrays (?q=a&q=b): nos quedamos con el primero. */
-async function parseFilters(searchParams: Props['searchParams']) {
-  const raw = await searchParams;
-  const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
-  return catalogFiltersSchema.parse({
-    categoria: first(raw.categoria),
-    estado: first(raw.estado),
-    q: first(raw.q),
-  });
-}
-
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
-  const { categoria } = await parseFilters(searchParams);
-  return { title: categoria === 'consolas' ? 'Consolas' : 'Botín' };
+  const { categoria } = await parseCatalogFilters(searchParams);
+  return { title: CATEGORIES.find((c) => c.value === categoria)?.plural ?? 'Botín' };
 }
 
 export default async function CatalogPage({ searchParams }: Props) {
-  const filters = await parseFilters(searchParams);
+  const filters = await parseCatalogFilters(searchParams);
   const products = await listProducts({ category: filters.categoria, q: filters.q || undefined });
 
   return (
     <main className="sec">
       <Wrap>
         <SectionHead
+          as="h1"
           label="// Botín"
           title={
             <>

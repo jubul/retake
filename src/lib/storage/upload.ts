@@ -11,6 +11,12 @@ export async function saveProductImage(productId: string, file: File, alt: strin
   const path = `products/${productId}/${imageId}.webp`;
   const thumbPath = `products/${productId}/${imageId}-thumb.webp`;
   await storage.put(path, processed.main.data, 'image/webp');
-  await storage.put(thumbPath, processed.thumb.data, 'image/webp');
+  try {
+    await storage.put(thumbPath, processed.thumb.data, 'image/webp');
+  } catch (error) {
+    // No dejar el archivo principal huérfano si falla el thumb.
+    await storage.delete(path).catch(() => undefined);
+    throw error;
+  }
   return { path, thumbPath, width: processed.main.width, height: processed.main.height, alt };
 }

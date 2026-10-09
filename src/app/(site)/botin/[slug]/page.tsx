@@ -4,8 +4,9 @@ import { ProductCta } from '@/components/site/ProductCta';
 import { ProductGallery } from '@/components/site/ProductGallery';
 import { ProductSpecs } from '@/components/site/ProductSpecs';
 import { Burst, Stamp, StatusStamp, Wrap } from '@/components/ui';
+import { getProductBySlugCached } from '@/lib/products/cached';
 import { categoryLabel } from '@/lib/products/constants';
-import { getProductBySlug } from '@/lib/products/queries';
+
 import { formatPrice } from '@/lib/utils/format';
 
 export const dynamic = 'force-dynamic';
@@ -14,7 +15,7 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
+  const product = await getProductBySlugCached(slug);
   if (!product) return { title: 'No encontrado' };
   const image = product.images[0];
   return {
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
+  const product = await getProductBySlugCached(slug);
   if (!product) notFound();
 
   return (

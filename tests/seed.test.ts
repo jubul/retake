@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { SEED_PRODUCTS } from '../scripts/seed';
+import { SEED_PRODUCTS, seedDb } from '../scripts/seed';
 import { products } from '@/lib/db/schema';
 import { listProducts } from '@/lib/products/queries';
+import { insertImages } from '@/lib/products/repo';
+import { getStorage } from '@/lib/storage';
 import { testDb } from './helpers/db';
 import { seedProducts } from './helpers/fixtures';
 
@@ -11,22 +13,10 @@ const SLUGS = [
   'ds-lite-crimson-black',
   'pokemon-soulsilver-jp',
 ];
-const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** Replica la inserción de scripts/seed.ts (main() no es importable sin efectos). */
 async function seedFromScript() {
   const db = await testDb();
-  const now = Date.now();
-  await db.insert(products).values(
-    SEED_PRODUCTS.map((p, i) => ({
-      ...p,
-      id: `seed-${i}`,
-      status: 'available' as const,
-      origin: 'JP',
-      createdAt: new Date(now - i * DAY_MS),
-      updatedAt: new Date(now - i * DAY_MS),
-    })),
-  );
+  await seedDb(db);
   return db;
 }
 
@@ -84,5 +74,30 @@ describe('seedProducts (fixtures)', () => {
     expect(list.map((p) => [p.name, p.price, p.note])).toEqual(
       SEED_PRODUCTS.map((p) => [p.name, p.price, p.note]),
     );
+  });
+});
+
+describe('seedDb', () => {
+  it('sin reset omite si ya hay productos', async () => {
+    const db = await testDb();
+    expect(await seedDb(db)).toEqual({ inserted: 4, skipped: false });
+    expect(await seedDb(db)).toEqual({ inserted: 0, skipped: true });
+    expect(await db.select().from(products)).toHaveLength(4);
+  });
+
+  it('con reset vuelve a sembrar sin duplicar y borra los archivos de las fotos', async () => {
+    const db = await testDb();
+    const storage = getStorage();
+    const [first] = await seedProducts(db);
+    const main = `products/${first!.id}/a.webp`;
+    const thumb = `products/${first!.id}/a-thumb.webp`;
+    await storage.put(main, Buffer.from('x'), 'image/webp');
+    await storage.put(thumb, Buffer.from('x'), 'image/webp');
+    await insertImages(first!.id, [{ path: main, thumbPath: thumb, width: 1, height: 1, alt: 'a' }], db);
+
+    expect(await seedDb(db, { reset: true })).toEqual({ inserted: 4, skipped: false });
+    expect(await db.select().from(products)).toHaveLength(4);
+    expect(await storage.get(main)).toBeNull();
+    expect(await storage.get(thumb)).toBeNull();
   });
 });

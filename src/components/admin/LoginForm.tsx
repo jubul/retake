@@ -25,7 +25,7 @@ export function LoginForm() {
           aria-describedby={state.error ? 'password-error' : undefined}
         />
         {state.error ? (
-          <p id="password-error" role="alert" className="text-sm font-bold text-pink">
+          <p id="password-error" role="alert" className="text-sm font-bold text-[#c2005c]">
             {state.error}
           </p>
         ) : null}

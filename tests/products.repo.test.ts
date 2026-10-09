@@ -67,6 +67,26 @@ describe('insertProduct / slugs', () => {
     expect(await ensureUniqueSlug('custom', undefined, db)).toBe('custom-2');
   });
 
+  it('slug explícito que ya existe lanza slug_taken al crear', async () => {
+    const db = await testDb();
+    await insertProduct(input({ name: 'Foo', slug: 'custom' }), db);
+    await expect(insertProduct(input({ name: 'Otro', slug: 'custom' }), db)).rejects.toMatchObject({
+      name: 'RepoError',
+      code: 'slug_taken',
+    });
+  });
+
+  it('ensureUniqueSlug nunca pasa de 80 caracteres', async () => {
+    const db = await testDb();
+    const base = 'a'.repeat(80);
+    const a = await insertProduct(input({ name: 'Aa', slug: base }), db);
+    expect(a.slug).toHaveLength(80);
+    const next = await ensureUniqueSlug(base, undefined, db);
+    expect(next).toBe(`${'a'.repeat(78)}-2`);
+    expect(next.length).toBeLessThanOrEqual(80);
+    expect((await ensureUniqueSlug('x'.repeat(200), undefined, db)).length).toBeLessThanOrEqual(80);
+  });
+
   it('getProductBySlug / getProductById', async () => {
     const db = await testDb();
     const p = await insertProduct(input(), db);
@@ -91,15 +111,36 @@ describe('updateProductById', () => {
     );
   });
 
-  it('mantiene el slug si no viene y actualiza updatedAt', async () => {
+  it('sin slug, mantiene el actual si el nombre no cambió y actualiza updatedAt', async () => {
     const db = await testDb();
     const p = await insertProduct(input({ name: 'Foo' }), db);
     await new Promise((r) => setTimeout(r, 5));
-    const u = await updateProductById(p.id, input({ name: 'Renombrado', price: '5' }), db);
+    const u = await updateProductById(p.id, input({ name: 'Foo', price: '5' }), db);
     expect(u?.slug).toBe('foo');
-    expect(u?.name).toBe('Renombrado');
     expect(u?.price).toBe(5);
     expect(u!.updatedAt.getTime()).toBeGreaterThan(p.updatedAt.getTime());
+  });
+
+  it('sin slug, lo regenera desde el nombre (único, sin churn con sufijo)', async () => {
+    const db = await testDb();
+    const p = await insertProduct(input({ name: 'Foo' }), db);
+    await insertProduct(input({ name: 'Bar' }), db);
+    const second = await insertProduct(input({ name: 'Foo' }), db);
+    expect(second.slug).toBe('foo-2');
+    // mismo nombre con sufijo de unicidad: no cambia
+    expect((await updateProductById(second.id, input({ name: 'Foo' }), db))?.slug).toBe('foo-2');
+    // renombrado: se regenera
+    const u = await updateProductById(p.id, input({ name: 'Renombrado', price: '5' }), db);
+    expect(u?.slug).toBe('renombrado');
+    expect(u?.name).toBe('Renombrado');
+    // renombrado a un nombre ya usado: sufijo
+    expect((await updateProductById(p.id, input({ name: 'Bar' }), db))?.slug).toBe('bar-2');
+  });
+
+  it('slug explícito se respeta aunque no coincida con el nombre', async () => {
+    const db = await testDb();
+    const p = await insertProduct(input({ name: 'Foo' }), db);
+    expect((await updateProductById(p.id, input({ name: 'Zeta', slug: 'mio' }), db))?.slug).toBe('mio');
   });
 
   it('permite conservar su propio slug y devuelve null si no existe', async () => {

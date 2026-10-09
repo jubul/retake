@@ -26,10 +26,10 @@ export function Field({ label, name, error, hint, children }: FieldProps) {
       <label htmlFor={name} className="pixel">
         {label}
       </label>
-      {hint ? <p className="pixel text-ink/60">{hint}</p> : null}
+      {hint ? <p className="pixel text-ink/75">{hint}</p> : null}
       {children}
       {error && error.length > 0 ? (
-        <p id={`${name}-error`} role="alert" className="text-sm font-bold text-pink">
+        <p id={`${name}-error`} role="alert" className="text-sm font-bold text-[#c2005c]">
           {error.join(' ')}
         </p>
       ) : null}

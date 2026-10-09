@@ -1458,3 +1458,28 @@ Ola 5:  T09
 3. **Multi-admin:** tabla `users` (email, passwordHash con argon2, role), invitaciones por link, sesiones con `jti` revocables, rate-limit de login (p. ej. 5 intentos / 15 min por IP).
 4. **i18n EN:** `next-intl` o diccionarios propios; rutas `/en`; copy en inglés para compradores de afuera; precios con conversión indicativa.
 5. Mejoras menores: búsqueda normalizada sin acentos (`search_text`), "reservado hasta" con fecha, orden manual drag-and-drop de productos, OG image generada (`opengraph-image.tsx` con la estética del zine), analytics sin cookies (Plausible/Umami), export CSV del catálogo.
+
+---
+
+## 9. Estado al cierre (2026-10-09)
+
+Desviaciones respecto de los contratos originales que sobrevivieron (T02–T09), una línea cada una:
+
+- `src/proxy.ts` (Next 16, ex `middleware.ts`) y `src/lib/auth/server.ts` comparten `sessionFromCookie(token, secret)` de `session.ts`; `proxy.ts` no importa `@/lib/env` y lee `process.env.SESSION_SECRET` directo.
+- `loginSchema` se usa desde `auth/actions.ts` (T03 no podía importarlo); el login suma limitador en memoria por IP (`src/lib/auth/rate-limit.ts`: 5 fallos / 15 min, por proceso; multi-instancia queda en el roadmap).
+- `productInputSchema.price` trata `''` como faltante ("Poné un precio"); `0` sigue siendo válido.
+- `imageFilesSchema` suma tope de 64 MB por tanda y `serverActions.bodySizeLimit` pasó de 32 a 72 MB.
+- `ensureUniqueSlug` recorta la base para que `base-N` no pase de 80 caracteres.
+- `insertProduct` con slug explícito repetido lanza `RepoError('slug_taken')` (antes lo deduplicaba con sufijo); solo los slugs autogenerados pasan por `ensureUniqueSlug`.
+- `updateProductById` sin slug regenera desde `name` (conserva el actual si ya es `base` o `base-N`), en vez de mantenerlo siempre.
+- `saveProductImage` borra el archivo principal si falla el `put` del thumb; `LocalStorage.delete` quita el directorio padre si queda vacío (nunca el root).
+- `scripts/seed.ts` exporta `seedDb(db, { reset })` además de `SEED_PRODUCTS`; `--reset` borra también los archivos de las fotos; `tests/helpers/fixtures.ts` `seedProducts` delega en `seedDb`.
+- `drizzle.config.ts` usa `dialect: 'turso'` + `authToken` solo cuando `DATABASE_URL` empieza con `libsql://`.
+- Queries nuevas fuera del contrato: `getProductSlug`, `listProductSlugs` (sitemap, sin join de imágenes) y `heroProduct` (destacado disponible más reciente, si no el último disponible).
+- `src/lib/products/cached.ts` (solo servidor) envuelve con `React.cache` `getProductBySlug` y el parseo de filtros del catálogo; `queries.ts` sigue sin importar `react`.
+- `Hero`/`HeroArt` reciben `product` (no `latest`); `Photo` acepta `loading` (default `'lazy'`) y la galería usa `'eager'` en la foto visible; `SectionHead` acepta `as` (el catálogo usa `h1`).
+- `/admin/(panel)/error.tsx` agregado como red de seguridad ante fallos inesperados de acciones.
+- `src/app/favicon.ico` (PNG dentro de ICO, 32x32) generado una vez desde `icon.svg`; el generador no está en el repo.
+- Contraste/foco: `.legal` a .75 de opacidad, `.tag .n` a .65, textos `pixel` del admin a `text-ink/75`, errores de formulario en `#c2005c`, y outline de foco `ink` sobre superficies de papel (cards, tags, admin).
+- El `role="alert"` con el nombre del producto en `/admin/productos/[id]` es el anunciador de rutas de Next (`next-route-announcer`), no un componente propio; los tests e2e deben acotar el selector.
+- `robots.txt` bloquea `/uploads`, por lo que los buscadores no indexan las fotos (las OG de redes sociales igual funcionan); revisar si se quiere indexación de imágenes.

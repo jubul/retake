@@ -1,9 +1,10 @@
 import { pathToFileURL } from 'node:url';
 import { createId } from '@paralleldrive/cuid2';
 import { count } from 'drizzle-orm';
-import { createDb } from '../src/lib/db/client';
+import { createDb, type Db } from '../src/lib/db/client';
 import { productImages, products } from '../src/lib/db/schema';
 import { getEnv } from '../src/lib/env';
+import { getStorage } from '../src/lib/storage';
 import type { NewProduct } from '../src/lib/products/types';
 
 type SeedProduct = Pick<
@@ -57,34 +58,57 @@ export const SEED_PRODUCTS: readonly SeedProduct[] = [
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** Borra los archivos de storage de todas las fotos (errores ignorados: no deben frenar el reset). */
+async function deleteAllImageFiles(db: Db): Promise<void> {
+  const rows = await db
+    .select({ path: productImages.path, thumbPath: productImages.thumbPath })
+    .from(productImages);
+  if (rows.length === 0) return;
+  const storage = getStorage();
+  await Promise.all(
+    rows.flatMap((r) => [r.path, r.thumbPath]).map((key) => storage.delete(key).catch(() => undefined)),
+  );
+}
+
+/** Siembra los productos del mockup. Sin `reset`, se omite si ya hay productos. */
+export async function seedDb(
+  db: Db,
+  opts: { reset?: boolean } = {},
+): Promise<{ inserted: number; skipped: boolean }> {
+  if (opts.reset) {
+    await deleteAllImageFiles(db);
+    await db.delete(productImages);
+    await db.delete(products);
+  } else {
+    const [row] = await db.select({ n: count() }).from(products);
+    if ((row?.n ?? 0) > 0) return { inserted: 0, skipped: true };
+  }
+  const now = Date.now();
+  await db.insert(products).values(
+    SEED_PRODUCTS.map((p, i) => ({
+      ...p,
+      id: createId(),
+      status: 'available' as const,
+      origin: 'JP',
+      createdAt: new Date(now - i * DAY_MS),
+      updatedAt: new Date(now - i * DAY_MS),
+    })),
+  );
+  return { inserted: SEED_PRODUCTS.length, skipped: false };
+}
+
 async function main(): Promise<void> {
   const reset = process.argv.includes('--reset');
   const env = getEnv();
   const { db, client } = createDb(env.DATABASE_URL, env.DATABASE_AUTH_TOKEN);
   try {
-    if (reset) {
-      await db.delete(productImages);
-      await db.delete(products);
-      console.log('reset: tablas vaciadas');
+    const result = await seedDb(db, { reset });
+    if (reset) console.log('reset: tablas vaciadas');
+    if (result.skipped) {
+      console.log('seed omitido: ya hay productos (usá --reset para volver a sembrar)');
     } else {
-      const [row] = await db.select({ n: count() }).from(products);
-      if ((row?.n ?? 0) > 0) {
-        console.log(`seed omitido: ya hay ${row?.n} productos (usá --reset para volver a sembrar)`);
-        return;
-      }
+      console.log(`seed: ${result.inserted} productos insertados`);
     }
-    const now = Date.now();
-    await db.insert(products).values(
-      SEED_PRODUCTS.map((p, i) => ({
-        ...p,
-        id: createId(),
-        status: 'available' as const,
-        origin: 'JP',
-        createdAt: new Date(now - i * DAY_MS),
-        updatedAt: new Date(now - i * DAY_MS),
-      })),
-    );
-    console.log(`seed: ${SEED_PRODUCTS.length} productos insertados`);
   } finally {
     client.close();
   }

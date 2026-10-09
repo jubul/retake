@@ -3,6 +3,9 @@ import {
   countsByStatus,
   escapeLike,
   getProductById,
+  getProductSlug,
+  heroProduct,
+  listProductSlugs,
   getProductBySlug,
   latestProducts,
   limitedProducts,
@@ -244,5 +247,66 @@ describe('slugExists', () => {
     const q = await insertProduct(makeProductInput({ slug: 'dos' }), db);
     expect(await slugExists('uno', q.id, db)).toBe(true);
     expect(await slugExists('dos', p.id, db)).toBe(true);
+  });
+});
+
+describe('getProductSlug', () => {
+  it('devuelve solo el slug o null', async () => {
+    const db = await testDb();
+    const p = await insertProduct(makeProductInput({ name: 'Foo' }), db);
+    expect(await getProductSlug(p.id, db)).toBe('foo');
+    expect(await getProductSlug('nope', db)).toBeNull();
+  });
+});
+
+describe('listProductSlugs', () => {
+  it('excluye vendidos y devuelve slug + updatedAt', async () => {
+    const db = await testDb();
+    await insertProduct(makeProductInput({ name: 'Uno' }), db);
+    await insertProduct(makeProductInput({ name: 'Dos', status: 'reserved' }), db);
+    await insertProduct(makeProductInput({ name: 'Tres', status: 'sold' }), db);
+    const rows = await listProductSlugs(db);
+    expect(rows.map((r) => r.slug).sort()).toEqual(['dos', 'uno']);
+    expect(rows[0]!.updatedAt).toBeInstanceOf(Date);
+    expect(Object.keys(rows[0]!).sort()).toEqual(['slug', 'updatedAt']);
+  });
+
+  it('DB vacía → []', async () => {
+    expect(await listProductSlugs(await testDb())).toEqual([]);
+  });
+});
+
+describe('heroProduct', () => {
+  it('prefiere el destacado disponible más reciente', async () => {
+    const db = await testDb();
+    const now = Date.now();
+    const a = await insertProduct(makeProductInput({ name: 'Aa', featured: 'on' }), db);
+    const b = await insertProduct(makeProductInput({ name: 'Bb', featured: 'on' }), db);
+    const c = await insertProduct(makeProductInput({ name: 'Cc' }), db);
+    await insertProduct(makeProductInput({ name: 'Dd', featured: 'on', status: 'sold' }), db);
+    await setCreatedAt(db, a.id, now - 3000);
+    await setCreatedAt(db, b.id, now - 2000);
+    await setCreatedAt(db, c.id, now - 1000);
+    expect((await heroProduct(db))?.slug).toBe('bb');
+  });
+
+  it('sin destacados cae al disponible más reciente (con imágenes)', async () => {
+    const db = await testDb();
+    const now = Date.now();
+    const a = await insertProduct(makeProductInput({ name: 'Aa' }), db);
+    const b = await insertProduct(makeProductInput({ name: 'Bb' }), db);
+    await setCreatedAt(db, a.id, now - 2000);
+    await setCreatedAt(db, b.id, now - 1000);
+    await insertImages(b.id, [makeImage(1)], db);
+    const hero = await heroProduct(db);
+    expect(hero?.slug).toBe('bb');
+    expect(hero?.images).toHaveLength(1);
+  });
+
+  it('un destacado vendido o reservado no cuenta; sin disponibles → null', async () => {
+    const db = await testDb();
+    await insertProduct(makeProductInput({ name: 'Aa', featured: 'on', status: 'reserved' }), db);
+    expect(await heroProduct(db)).toBeNull();
+    expect(await heroProduct(await testDb())).toBeNull();
   });
 });

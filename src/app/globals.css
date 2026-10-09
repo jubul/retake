@@ -68,6 +68,15 @@
     outline: 3px solid var(--acid);
     outline-offset: 2px;
   }
+  /* el acid no se ve sobre papel: superficies claras usan ink */
+  .card :focus-visible,
+  .tag:focus-visible,
+  .admin-root :focus-visible {
+    outline-color: var(--ink);
+  }
+  .admin-root header :focus-visible {
+    outline-color: var(--acid);
+  }
 }
 
 /* ---- T04: componentes del mockup ---- */
@@ -729,7 +738,8 @@
   .tag:nth-child(2n) {
     box-shadow: 7px 7px 0 var(--cyan);
   }
-  .tag:hover {
+  .tag:hover,
+  .tag:focus-visible {
     transform: rotate(0) translate(-2px, -2px);
     box-shadow: 10px 10px 0 var(--acid);
   }
@@ -759,7 +769,7 @@
     position: absolute;
     right: 10px;
     top: 8px;
-    color: rgba(10, 10, 10, 0.45);
+    color: rgba(10, 10, 10, 0.65);
   }
   .tag .tape {
     width: 70px;
@@ -997,7 +1007,7 @@
   }
   .legal {
     margin-top: 40px;
-    color: rgba(242, 239, 230, 0.5);
+    color: rgba(242, 239, 230, 0.75);
     display: flex;
     justify-content: space-between;
     gap: 12px;

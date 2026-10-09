@@ -44,6 +44,16 @@ describe('productInputSchema', () => {
     expect(r.data.slug).toBe('mi-slug');
   });
 
+  it('precio vacío falla con "Poné un precio"; "0" sigue siendo válido', () => {
+    for (const price of ['', '   ']) {
+      const r = productInputSchema.safeParse({ ...validForm, price });
+      expect(r.success).toBe(false);
+      if (!r.success) expect(toFieldErrors(r.error).fields?.price?.[0]).toBe('Poné un precio');
+    }
+    const zero = productInputSchema.safeParse({ ...validForm, price: '0' });
+    expect(zero.success && zero.data.price).toBe(0);
+  });
+
   it('error de categoría en español', () => {
     const r = productInputSchema.safeParse({ ...validForm, category: 'x' });
     expect(r.success).toBe(false);
@@ -82,6 +92,12 @@ describe('imageFileSchema', () => {
     expect(imageFilesSchema.safeParse([]).success).toBe(false);
     expect(imageFilesSchema.safeParse(Array(9).fill(f)).success).toBe(false);
     expect(imageFilesSchema.safeParse([f]).success).toBe(true);
+  });
+
+  it('imageFilesSchema acepta 8 fotos de 8 MB (64 MB en total, el tope)', () => {
+    const big = new File([new Uint8Array(1)], 'a.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(big, 'size', { value: IMAGE_MAX_BYTES });
+    expect(imageFilesSchema.safeParse(Array(8).fill(big)).success).toBe(true);
   });
 });
 

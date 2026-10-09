@@ -6,12 +6,12 @@ import { LimitedEditions } from '@/components/site/LimitedEditions';
 import { Reviews } from '@/components/site/Reviews';
 import { WhySection } from '@/components/site/WhySection';
 import { getReviews } from '@/content/reviews';
-import { latestProducts, limitedProducts } from '@/lib/products/queries';
+import { heroProduct, latestProducts, limitedProducts } from '@/lib/products/queries';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const [latest, limited] = await Promise.all([latestProducts(4), limitedProducts(4)]);
+  const [hero, latest, limited] = await Promise.all([heroProduct(), latestProducts(4), limitedProducts(4)]);
   const reviews = getReviews();
 
   return (
@@ -26,7 +26,7 @@ export default async function HomePage() {
           'Probadas una por una',
         ]}
       />
-      <Hero latest={latest[0] ?? null} />
+      <Hero product={hero} />
       <WhySection />
       <Categories />
       <Hazard>⚠ Stock limitado // cuando se va, se va ⚠</Hazard>

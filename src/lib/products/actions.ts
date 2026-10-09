@@ -8,7 +8,7 @@ import { getStorage } from '@/lib/storage';
 import { saveProductImage } from '@/lib/storage/upload';
 import { formDataToObject } from '@/lib/utils/form';
 import { IMAGES_MAX_PER_PRODUCT, type NewImageData } from './constants';
-import { getProductById } from './queries';
+import { getProductById, getProductSlug } from './queries';
 import {
   deleteImage,
   deleteProductById,
@@ -96,11 +96,11 @@ export async function updateProduct(
 
   try {
     const db = getDb();
-    const before = await getProductById(id, db);
-    if (!before) return repoFailure(new RepoError('not_found'), 'updateProduct');
+    const beforeSlug = await getProductSlug(id, db);
+    if (beforeSlug === null) return repoFailure(new RepoError('not_found'), 'updateProduct');
     const updated = await updateProductById(id, parsed.data, db);
     if (!updated) return repoFailure(new RepoError('not_found'), 'updateProduct');
-    revalidateProduct(id, before.slug, updated.slug);
+    revalidateProduct(id, beforeSlug, updated.slug);
     return { ok: true, id };
   } catch (error) {
     return repoFailure(error, 'updateProduct');
@@ -112,11 +112,11 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
   await requireSession();
   try {
     const db = getDb();
-    const before = await getProductById(id, db);
+    const beforeSlug = await getProductSlug(id, db);
     const { deleted, storageKeys } = await deleteProductById(id, db);
     if (!deleted) return repoFailure(new RepoError('not_found'), 'deleteProduct');
     await deleteKeys(storageKeys);
-    revalidateProduct(id, before?.slug);
+    revalidateProduct(id, beforeSlug ?? undefined);
   } catch (error) {
     return repoFailure(error, 'deleteProduct');
   }

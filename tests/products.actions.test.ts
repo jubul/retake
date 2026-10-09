@@ -119,6 +119,16 @@ describe('createProduct', () => {
   });
 });
 
+describe('createProduct: slug explícito repetido', () => {
+  it('maps a taken slug to fields.slug', async () => {
+    await seedProduct('Uno', 'uno');
+    const result = await createProduct(null, form({ ...VALID, slug: 'uno' }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors.fields?.slug).toEqual(['Ese slug ya existe']);
+    expect(await listProducts({}, holder.db)).toHaveLength(1);
+  });
+});
+
 describe('updateProduct', () => {
   it('maps a taken slug to fields.slug', async () => {
     await seedProduct('Uno', 'uno');

@@ -114,3 +114,30 @@ export async function slugExists(slug: string, excludeId?: string, db: Db = getD
     .limit(1);
   return rows.length > 0;
 }
+
+/** Solo el slug de un producto (sin imágenes). null si no existe. */
+export async function getProductSlug(id: string, db: Db = getDb()): Promise<string | null> {
+  const [row] = await db.select({ slug: products.slug }).from(products).where(eq(products.id, id)).limit(1);
+  return row?.slug ?? null;
+}
+
+/** Slugs de productos no vendidos (sitemap), sin join de imágenes. */
+export async function listProductSlugs(db: Db = getDb()): Promise<{ slug: string; updatedAt: Date }[]> {
+  return db
+    .select({ slug: products.slug, updatedAt: products.updatedAt })
+    .from(products)
+    .where(ne(products.status, 'sold'))
+    .orderBy(desc(products.createdAt));
+}
+
+/** Producto para el hero: el destacado disponible más reciente; si no hay, el disponible más reciente; si no, null. */
+export async function heroProduct(db: Db = getDb()): Promise<ProductWithImages | null> {
+  const featured = await db.query.products.findFirst({
+    where: and(eq(products.featured, true), eq(products.status, 'available')),
+    orderBy: [desc(products.createdAt)],
+    with: withImages,
+  });
+  if (featured) return featured;
+  const [latest] = await latestProducts(1, db);
+  return latest ?? null;
+}

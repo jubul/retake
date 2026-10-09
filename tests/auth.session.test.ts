@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   SESSION_TTL_SECONDS,
   sessionCookieOptions,
+  sessionFromCookie,
   signSession,
   verifySessionToken,
 } from '@/lib/auth/session';
@@ -56,5 +57,16 @@ describe('session', () => {
       path: '/',
       maxAge: SESSION_TTL_SECONDS,
     });
+  });
+});
+
+describe('sessionFromCookie', () => {
+  it('null si falta token o secret; sesión si ambos son válidos', async () => {
+    const token = await signSession(SECRET);
+    expect(await sessionFromCookie(undefined, SECRET)).toBeNull();
+    expect(await sessionFromCookie(token, undefined)).toBeNull();
+    expect(await sessionFromCookie(token, '')).toBeNull();
+    expect(await sessionFromCookie('basura', SECRET)).toBeNull();
+    expect((await sessionFromCookie(token, SECRET))?.sub).toBe('admin');
   });
 });

@@ -12,6 +12,8 @@ export type { NewImageData };
 
 export type RepoErrorCode = 'not_found' | 'too_many_images' | 'bad_order' | 'slug_taken';
 
+const SLUG_MAX = 80;
+
 export class RepoError extends Error {
   code: RepoErrorCode;
   constructor(code: RepoErrorCode, message?: string) {
@@ -23,17 +25,25 @@ export class RepoError extends Error {
 
 /** Genera un slug único: base, base-2, base-3... (excluyendo excludeId al comparar). */
 export async function ensureUniqueSlug(base: string, excludeId?: string, db: Db = getDb()): Promise<string> {
-  const root = base || 'producto';
+  // base-N nunca debe pasar de SLUG_MAX (slugSchema.max): se recorta la base dejando lugar al sufijo.
+  const root = (base || 'producto').slice(0, SLUG_MAX).replace(/-+$/, '') || 'producto';
   let candidate = root;
   for (let n = 2; await slugExists(candidate, excludeId, db); n++) {
-    candidate = `${root}-${n}`;
+    const suffix = `-${n}`;
+    candidate = `${root.slice(0, SLUG_MAX - suffix.length).replace(/-+$/, '')}${suffix}`;
   }
   return candidate;
 }
 
-/** id = createId(); slug = input.slug ?? slugify(input.name), luego ensureUniqueSlug. */
+/** id = createId(). Slug explícito: RepoError 'slug_taken' si ya existe. Sin slug: slugify(name) + ensureUniqueSlug. */
 export async function insertProduct(input: ProductInput, db: Db = getDb()): Promise<Product> {
-  const slug = await ensureUniqueSlug(input.slug ?? slugify(input.name), undefined, db);
+  let slug: string;
+  if (input.slug !== undefined) {
+    if (await slugExists(input.slug, undefined, db)) throw new RepoError('slug_taken', 'Ese slug ya existe');
+    slug = input.slug;
+  } else {
+    slug = await ensureUniqueSlug(slugify(input.name), undefined, db);
+  }
   const now = new Date();
   const [row] = await db
     .insert(products)
@@ -58,21 +68,29 @@ export async function insertProduct(input: ProductInput, db: Db = getDb()): Prom
   return row!;
 }
 
-/** Actualiza campos + updatedAt. Slug: si viene, se respeta (RepoError 'slug_taken' si lo usa otro); si no, se mantiene el actual. null si no existe. */
+/** Actualiza campos + updatedAt. Slug: si viene, se respeta (RepoError 'slug_taken' si lo usa otro); si no, se regenera desde name (se mantiene el actual si ya corresponde a ese nombre). null si no existe. */
 export async function updateProductById(
   id: string,
   input: ProductInput,
   db: Db = getDb(),
 ): Promise<Product | null> {
-  const [existing] = await db.select({ id: products.id }).from(products).where(eq(products.id, id));
+  const [existing] = await db.select({ slug: products.slug }).from(products).where(eq(products.id, id));
   if (!existing) return null;
-  if (input.slug !== undefined && (await slugExists(input.slug, id, db))) {
-    throw new RepoError('slug_taken', 'Ese slug ya existe');
+  let slug = input.slug;
+  if (slug !== undefined) {
+    if (await slugExists(slug, id, db)) throw new RepoError('slug_taken', 'Ese slug ya existe');
+  } else {
+    const base = slugify(input.name) || 'producto';
+    // El actual puede ser "base" o "base-N" (sufijo de unicidad): en ese caso no hay cambio.
+    const sameBase =
+      existing.slug === base ||
+      (existing.slug.startsWith(`${base}-`) && /^\d+$/.test(existing.slug.slice(base.length + 1)));
+    if (!sameBase) slug = await ensureUniqueSlug(base, id, db);
   }
   const [row] = await db
     .update(products)
     .set({
-      ...(input.slug !== undefined ? { slug: input.slug } : {}),
+      ...(slug !== undefined ? { slug } : {}),
       name: input.name,
       category: input.category,
       price: input.price,

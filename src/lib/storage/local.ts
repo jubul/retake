@@ -1,4 +1,4 @@
-import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rmdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { contentTypeFor, isValidStorageKey, type Storage, type StoredObject } from './types';
 
@@ -49,6 +49,14 @@ export class LocalStorage implements Storage {
       await unlink(full);
     } catch (err) {
       if (errCode(err) !== 'ENOENT') throw err;
+    }
+    // Limpia el directorio padre si quedó vacío (nunca el root).
+    const dir = path.dirname(full);
+    if (dir === this.root) return;
+    try {
+      await rmdir(dir);
+    } catch (err) {
+      if (errCode(err) !== 'ENOTEMPTY' && errCode(err) !== 'ENOENT') throw err;
     }
   }
 
