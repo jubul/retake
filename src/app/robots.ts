@@ -3,7 +3,7 @@ import { publicEnv } from '@/lib/public-env';
 
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: { userAgent: '*', disallow: ['/admin', '/uploads'] },
+    rules: { userAgent: '*', disallow: ['/admin'] },
     sitemap: `${publicEnv.siteUrl}/sitemap.xml`,
   };
 }

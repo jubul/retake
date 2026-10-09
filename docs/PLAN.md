@@ -1482,4 +1482,4 @@ Desviaciones respecto de los contratos originales que sobrevivieron (T02–T09),
 - `src/app/favicon.ico` (PNG dentro de ICO, 32x32) generado una vez desde `icon.svg`; el generador no está en el repo.
 - Contraste/foco: `.legal` a .75 de opacidad, `.tag .n` a .65, textos `pixel` del admin a `text-ink/75`, errores de formulario en `#c2005c`, y outline de foco `ink` sobre superficies de papel (cards, tags, admin).
 - El `role="alert"` con el nombre del producto en `/admin/productos/[id]` es el anunciador de rutas de Next (`next-route-announcer`), no un componente propio; los tests e2e deben acotar el selector.
-- `robots.txt` bloquea `/uploads`, por lo que los buscadores no indexan las fotos (las OG de redes sociales igual funcionan); revisar si se quiere indexación de imágenes.
+- `robots.txt` ya no bloquea `/uploads`: las fotos de producto se dejan indexar (Google Imágenes y previews sociales las necesitan). Decisión de Juan al cierre.
